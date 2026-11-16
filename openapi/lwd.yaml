@@ -1,0 +1,5515 @@
+openapi: 3.2.0
+info:
+  version: 1.0.0
+  title: LWD API
+  description: |
+    LWD: deployments of z/OS applications, with approval and RACF access per application.
+    Tags give the access level: user (any signed-in user; COBOL checks the role per application and environment), admin, scheduler, job.
+servers:
+- url: https://<host>:<port>/lwdeploy/API/v1
+security:
+- bearerAuth: []
+tags:
+- name: public
+  description: 'No token: POST /token only'
+- name: user
+  description: Signed-in user; roles checked in COBOL through FACILITY profiles
+- name: admin
+  description: Administrator; FACILITY check in COBOL
+- name: scheduler
+  description: The scheduler's userid only (setting SCHEDUSR), through its own transaction
+- name: job
+  description: The deploy userids only, from the result step of a deployment job, through their own transaction
+paths:
+  /token:
+    summary: token
+    post:
+      summary: Sign in with RACF userid and passphrase
+      operationId: newAccessToken
+      tags:
+      - public
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewAccessTokenRequest'
+      responses:
+        '201':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1token/post/x-LWWProcessingSteps
+  /me:
+    summary: me
+    get:
+      summary: Get the signed-in user
+      operationId: getCurrentUser
+      tags:
+      - user
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCurrentUserResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1me/get/x-LWWProcessingSteps
+    put:
+      summary: Update own notification settings
+      operationId: updateCurrentUser
+      tags:
+      - user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCurrentUserRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateCurrentUserResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /applications:
+    summary: applications
+    get:
+      summary: List my applications
+      operationId: listApplications
+      tags:
+      - user
+      parameters:
+      - name: appID_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/appID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListApplicationsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1applications/get/x-LWWProcessingSteps
+  /applications/{appID}:
+    summary: applications
+    get:
+      summary: Get an application
+      operationId: getApplication
+      tags:
+      - user
+      parameters:
+      - name: appID
+        in: path
+        description: appID
+        required: true
+        schema:
+          $ref: '#/components/schemas/appID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetApplicationResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /environments:
+    summary: environments
+    get:
+      summary: List the environments of an application, in order, with the inventory
+      operationId: listEnvironments
+      tags:
+      - user
+      parameters:
+      - name: appID
+        in: query
+        description: appID
+        required: true
+        schema:
+          $ref: '#/components/schemas/appID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvironmentsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1environments/get/x-LWWProcessingSteps
+    post:
+      summary: Add an environment
+      operationId: newEnvironment
+      tags:
+      - user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewEnvironmentRequest'
+      responses:
+        '201':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewEnvironmentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /environments/{envID}:
+    summary: environments
+    get:
+      summary: Get an environment
+      operationId: getEnvironment
+      tags:
+      - user
+      parameters:
+      - name: envID
+        in: path
+        description: envID
+        required: true
+        schema:
+          $ref: '#/components/schemas/envID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEnvironmentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    put:
+      summary: Update name, order and promotion gate
+      operationId: updateEnvironment
+      tags:
+      - user
+      parameters:
+      - name: envID
+        in: path
+        description: envID
+        required: true
+        schema:
+          $ref: '#/components/schemas/envID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEnvironmentRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateEnvironmentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    delete:
+      summary: Delete an environment without deployments
+      operationId: deleteEnvironment
+      tags:
+      - user
+      parameters:
+      - name: envID
+        in: path
+        description: envID
+        required: true
+        schema:
+          $ref: '#/components/schemas/envID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /versions:
+    summary: versions
+    get:
+      summary: List versions, newest first
+      operationId: listVersions
+      tags:
+      - user
+      parameters:
+      - name: appID
+        in: query
+        description: appID
+        required: true
+        schema:
+          $ref: '#/components/schemas/appID'
+      - name: versionStatus_filter
+        in: query
+        description: Filter
+        required: false
+        schema:
+          $ref: '#/components/schemas/versionStatus'
+      - name: versionID_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/versionID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListVersionsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1versions/get/x-LWWProcessingSteps
+    post:
+      summary: Register a version
+      operationId: newVersion
+      tags:
+      - user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewVersionRequest'
+      responses:
+        '201':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewVersionResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1versions/post/x-LWWProcessingSteps
+  /versions/{versionID}:
+    summary: versions
+    get:
+      summary: Get a version
+      operationId: getVersion
+      tags:
+      - user
+      parameters:
+      - name: versionID
+        in: path
+        description: versionID
+        required: true
+        schema:
+          $ref: '#/components/schemas/versionID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetVersionResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    put:
+      summary: Update a version never used
+      operationId: updateVersion
+      tags:
+      - user
+      parameters:
+      - name: versionID
+        in: path
+        description: versionID
+        required: true
+        schema:
+          $ref: '#/components/schemas/versionID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVersionRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateVersionResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    delete:
+      summary: Delete a version never used
+      operationId: deleteVersion
+      tags:
+      - user
+      parameters:
+      - name: versionID
+        in: path
+        description: versionID
+        required: true
+        schema:
+          $ref: '#/components/schemas/versionID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /versionRetirements/{versionID}:
+    summary: versionRetirements
+    post:
+      summary: Retire a version
+      operationId: retireVersion
+      tags:
+      - user
+      parameters:
+      - name: versionID
+        in: path
+        description: versionID
+        required: true
+        schema:
+          $ref: '#/components/schemas/versionID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetireVersionResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /variables:
+    summary: variables
+    get:
+      summary: 'List the variables of one level: application, environment or version'
+      operationId: listVariables
+      tags:
+      - user
+      parameters:
+      - name: appID
+        in: query
+        description: appID
+        required: true
+        schema:
+          $ref: '#/components/schemas/appID'
+      - name: envID
+        in: query
+        description: Environment; 0 = not this level
+        required: false
+        schema:
+          $ref: '#/components/schemas/envID'
+      - name: versionID
+        in: query
+        description: Version; 0 = not this level
+        required: false
+        schema:
+          $ref: '#/components/schemas/versionID'
+      - name: varID_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/varID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListVariablesResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    post:
+      summary: Add a variable
+      operationId: newVariable
+      tags:
+      - user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewVariableRequest'
+      responses:
+        '201':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewVariableResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /variables/{varID}:
+    summary: variables
+    put:
+      summary: Update a variable
+      operationId: updateVariable
+      tags:
+      - user
+      parameters:
+      - name: varID
+        in: path
+        description: varID
+        required: true
+        schema:
+          $ref: '#/components/schemas/varID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVariableRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateVariableResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    delete:
+      summary: Delete a variable
+      operationId: deleteVariable
+      tags:
+      - user
+      parameters:
+      - name: varID
+        in: path
+        description: varID
+        required: true
+        schema:
+          $ref: '#/components/schemas/varID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /templates:
+    summary: templates
+    get:
+      summary: List the job templates, in order
+      operationId: listTemplates
+      tags:
+      - user
+      parameters:
+      - name: appID
+        in: query
+        description: appID
+        required: true
+        schema:
+          $ref: '#/components/schemas/appID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTemplatesResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    post:
+      summary: Add a job template, still without JCL
+      operationId: newTemplate
+      tags:
+      - user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewTemplateRequest'
+      responses:
+        '201':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewTemplateResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /templates/{templateID}:
+    summary: templates
+    get:
+      summary: Get a job template
+      operationId: getTemplate
+      tags:
+      - user
+      parameters:
+      - name: templateID
+        in: path
+        description: templateID
+        required: true
+        schema:
+          $ref: '#/components/schemas/templateID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTemplateResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    put:
+      summary: Update name, order and highest RC
+      operationId: updateTemplate
+      tags:
+      - user
+      parameters:
+      - name: templateID
+        in: path
+        description: templateID
+        required: true
+        schema:
+          $ref: '#/components/schemas/templateID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTemplateRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateTemplateResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    delete:
+      summary: Delete a job template; its history stays
+      operationId: deleteTemplate
+      tags:
+      - user
+      parameters:
+      - name: templateID
+        in: path
+        description: templateID
+        required: true
+        schema:
+          $ref: '#/components/schemas/templateID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /templateRevisions:
+    summary: templateRevisions
+    get:
+      summary: List the revisions of a template, newest first
+      operationId: listTemplateRevisions
+      tags:
+      - user
+      parameters:
+      - name: templateID
+        in: query
+        description: templateID
+        required: true
+        schema:
+          $ref: '#/components/schemas/templateID'
+      - name: revision_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/revision'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTemplateRevisionsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /templateJcl/{templateID}:
+    summary: templateJcl
+    get:
+      summary: Get the JCL of a template revision
+      operationId: getTemplateJcl
+      tags:
+      - user
+      parameters:
+      - name: templateID
+        in: path
+        description: templateID
+        required: true
+        schema:
+          $ref: '#/components/schemas/templateID'
+      - name: revision
+        in: query
+        description: Revision; 0 = current
+        required: false
+        schema:
+          $ref: '#/components/schemas/revision'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTemplateJclResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    post:
+      summary: Save new JCL as the next revision
+      operationId: newTemplateJcl
+      tags:
+      - user
+      parameters:
+      - name: templateID
+        in: path
+        description: templateID
+        required: true
+        schema:
+          $ref: '#/components/schemas/templateID'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NewTemplateJclRequest'
+      responses:
+        '201':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewTemplateJclResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /deployments:
+    summary: deployments
+    get:
+      summary: List deployments, newest first
+      operationId: listDeployments
+      tags:
+      - user
+      parameters:
+      - name: appID
+        in: query
+        description: Application; 0 = all of mine
+        required: false
+        schema:
+          $ref: '#/components/schemas/appID'
+      - name: envID_filter
+        in: query
+        description: Filter
+        required: false
+        schema:
+          $ref: '#/components/schemas/envID'
+      - name: versionID_filter
+        in: query
+        description: Filter
+        required: false
+        schema:
+          $ref: '#/components/schemas/versionID'
+      - name: deplStatus_filter
+        in: query
+        description: Filter
+        required: false
+        schema:
+          $ref: '#/components/schemas/deplStatus'
+      - name: requestedBy_filter
+        in: query
+        description: Filter
+        required: false
+        schema:
+          $ref: '#/components/schemas/requestedBy'
+      - name: deplID_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/deplID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDeploymentsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    post:
+      summary: Request a deployment
+      operationId: newDeployment
+      tags:
+      - user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewDeploymentRequest'
+      responses:
+        '201':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewDeploymentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1deployments/post/x-LWWProcessingSteps
+  /deployments/{deplID}:
+    summary: deployments
+    get:
+      summary: Get a deployment
+      operationId: getDeployment
+      tags:
+      - user
+      parameters:
+      - name: deplID
+        in: path
+        description: deplID
+        required: true
+        schema:
+          $ref: '#/components/schemas/deplID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDeploymentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1deployments~1{deplID}/get/x-LWWProcessingSteps
+  /cancellations/{deplID}:
+    summary: cancellations
+    post:
+      summary: Cancel a deployment
+      operationId: cancelDeployment
+      tags:
+      - user
+      parameters:
+      - name: deplID
+        in: path
+        description: deplID
+        required: true
+        schema:
+          $ref: '#/components/schemas/deplID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelDeploymentRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelDeploymentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1cancellations~1{deplID}/post/x-LWWProcessingSteps
+  /retries/{deplID}:
+    summary: retries
+    post:
+      summary: Submit the failed job of a deployment again
+      operationId: retryDeployment
+      tags:
+      - user
+      parameters:
+      - name: deplID
+        in: path
+        description: deplID
+        required: true
+        schema:
+          $ref: '#/components/schemas/deplID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetryDeploymentRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetryDeploymentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1retries~1{deplID}/post/x-LWWProcessingSteps
+  /continuations/{deplID}:
+    summary: continuations
+    post:
+      summary: Skip the failed job, with a reason, and go on with the next
+      operationId: continueDeployment
+      tags:
+      - user
+      parameters:
+      - name: deplID
+        in: path
+        description: deplID
+        required: true
+        schema:
+          $ref: '#/components/schemas/deplID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContinueDeploymentRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContinueDeploymentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1continuations~1{deplID}/post/x-LWWProcessingSteps
+  /deploymentJobs:
+    summary: deploymentJobs
+    get:
+      summary: List the jobs of a deployment with their latest run
+      operationId: listDeploymentJobs
+      tags:
+      - user
+      parameters:
+      - name: deplID
+        in: query
+        description: deplID
+        required: true
+        schema:
+          $ref: '#/components/schemas/deplID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDeploymentJobsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1deploymentJobs/get/x-LWWProcessingSteps
+  /deploymentJcl/{deplID}:
+    summary: deploymentJcl
+    get:
+      summary: Get the frozen JCL of a job of a deployment
+      operationId: getDeploymentJcl
+      tags:
+      - user
+      parameters:
+      - name: deplID
+        in: path
+        description: deplID
+        required: true
+        schema:
+          $ref: '#/components/schemas/deplID'
+      - name: jobNo
+        in: query
+        description: jobNo
+        required: true
+        schema:
+          $ref: '#/components/schemas/jobNo'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDeploymentJclResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1deploymentJcl~1{deplID}/get/x-LWWProcessingSteps
+  /deploymentEvents:
+    summary: deploymentEvents
+    get:
+      summary: List the history of a deployment
+      operationId: listDeploymentEvents
+      tags:
+      - user
+      parameters:
+      - name: deplID
+        in: query
+        description: deplID
+        required: true
+        schema:
+          $ref: '#/components/schemas/deplID'
+      - name: eventNo_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/eventNo'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListDeploymentEventsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1deploymentEvents/get/x-LWWProcessingSteps
+  /approvalRequests:
+    summary: approvalRequests
+    get:
+      summary: List the deployments waiting for my approval, oldest first
+      operationId: listApprovalRequests
+      tags:
+      - user
+      parameters:
+      - name: deplID_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/deplID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListApprovalRequestsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1approvalRequests/get/x-LWWProcessingSteps
+  /approvals:
+    summary: approvals
+    get:
+      summary: List the decisions on a deployment
+      operationId: listApprovals
+      tags:
+      - user
+      parameters:
+      - name: deplID
+        in: query
+        description: deplID
+        required: true
+        schema:
+          $ref: '#/components/schemas/deplID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListApprovalsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1approvals/get/x-LWWProcessingSteps
+    post:
+      summary: Approve or reject a deployment
+      operationId: newApproval
+      tags:
+      - user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewApprovalRequest'
+      responses:
+        '201':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewApprovalResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1approvals/post/x-LWWProcessingSteps
+  /jobRuns:
+    summary: jobRuns
+    get:
+      summary: List the runs of a job of a deployment
+      operationId: listJobRuns
+      tags:
+      - user
+      parameters:
+      - name: deplID
+        in: query
+        description: deplID
+        required: true
+        schema:
+          $ref: '#/components/schemas/deplID'
+      - name: jobNo
+        in: query
+        description: jobNo
+        required: true
+        schema:
+          $ref: '#/components/schemas/jobNo'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListJobRunsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1jobRuns/get/x-LWWProcessingSteps
+  /jobSteps:
+    summary: jobSteps
+    get:
+      summary: List the steps of a run
+      operationId: listJobSteps
+      tags:
+      - user
+      parameters:
+      - name: runID
+        in: query
+        description: runID
+        required: true
+        schema:
+          $ref: '#/components/schemas/runID'
+      - name: stepNo_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/stepNo'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListJobStepsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1jobSteps/get/x-LWWProcessingSteps
+  /spoolFiles:
+    summary: spoolFiles
+    get:
+      summary: List the collected spool files of a run
+      operationId: listSpoolFiles
+      tags:
+      - user
+      parameters:
+      - name: runID
+        in: query
+        description: runID
+        required: true
+        schema:
+          $ref: '#/components/schemas/runID'
+      - name: fileNo_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/fileNo'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSpoolFilesResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1spoolFiles/get/x-LWWProcessingSteps
+  /spoolText/{runID}:
+    summary: spoolText
+    get:
+      summary: Get a part of a spool file
+      operationId: getSpoolText
+      tags:
+      - user
+      parameters:
+      - name: runID
+        in: path
+        description: runID
+        required: true
+        schema:
+          $ref: '#/components/schemas/runID'
+      - name: fileNo
+        in: query
+        description: fileNo
+        required: true
+        schema:
+          $ref: '#/components/schemas/fileNo'
+      - name: lineNum_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/lineNum'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSpoolTextResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1spoolText~1{runID}/get/x-LWWProcessingSteps
+  /schedulerTicks:
+    summary: schedulerTicks
+    post:
+      summary: 'One tick of the scheduler: expire, mark stuck runs, start one due deployment'
+      operationId: newSchedulerTick
+      tags:
+      - scheduler
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewSchedulerTickResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1schedulerTicks/post/x-LWWProcessingSteps
+  /jobResults:
+    summary: jobResults
+    post:
+      summary: The result of a run, from the result step of its job; the next job is submitted
+      operationId: newJobResult
+      tags:
+      - job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewJobResultRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewJobResultResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+      x-LWWProcessingSteps:
+        $ref: lwd_2_1.0.0.yaml/paths/~1jobResults/post/x-LWWProcessingSteps
+  /admin/applications:
+    summary: 'Admin: applications'
+    get:
+      summary: List all applications
+      operationId: adminListApplications
+      tags:
+      - admin
+      parameters:
+      - name: appID_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/appID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminListApplicationsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    post:
+      summary: Create an application
+      operationId: adminNewApplication
+      tags:
+      - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminNewApplicationRequest'
+      responses:
+        '201':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminNewApplicationResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /admin/applications/{appID}:
+    summary: 'Admin: applications'
+    get:
+      summary: Get an application
+      operationId: adminGetApplication
+      tags:
+      - admin
+      parameters:
+      - name: appID
+        in: path
+        description: appID
+        required: true
+        schema:
+          $ref: '#/components/schemas/appID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminGetApplicationResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    put:
+      summary: Update an application
+      operationId: adminUpdateApplication
+      tags:
+      - admin
+      parameters:
+      - name: appID
+        in: path
+        description: appID
+        required: true
+        schema:
+          $ref: '#/components/schemas/appID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateApplicationRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUpdateApplicationResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    delete:
+      summary: Delete an application without deployments
+      operationId: adminDeleteApplication
+      tags:
+      - admin
+      parameters:
+      - name: appID
+        in: path
+        description: appID
+        required: true
+        schema:
+          $ref: '#/components/schemas/appID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /admin/environmentControls/{envID}:
+    summary: 'Admin: environmentControls'
+    put:
+      summary: Set deploy userid, approval and deployer group
+      operationId: adminUpdateEnvironmentControls
+      tags:
+      - admin
+      parameters:
+      - name: envID
+        in: path
+        description: envID
+        required: true
+        schema:
+          $ref: '#/components/schemas/envID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateEnvironmentControlsRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUpdateEnvironmentControlsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /admin/deployments:
+    summary: 'Admin: deployments'
+    get:
+      summary: List deployments of all applications, newest first
+      operationId: adminListDeployments
+      tags:
+      - admin
+      parameters:
+      - name: appID_filter
+        in: query
+        description: Filter
+        required: false
+        schema:
+          $ref: '#/components/schemas/appID'
+      - name: deplStatus_filter
+        in: query
+        description: Filter
+        required: false
+        schema:
+          $ref: '#/components/schemas/deplStatus'
+      - name: requestedBy_filter
+        in: query
+        description: Filter
+        required: false
+        schema:
+          $ref: '#/components/schemas/requestedBy'
+      - name: deplID_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/deplID'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminListDeploymentsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /admin/refTables:
+    summary: 'Admin: refTables'
+    get:
+      summary: List allowed RACF groups, deploy userids or settings
+      operationId: adminListRefTables
+      tags:
+      - admin
+      parameters:
+      - name: tableID
+        in: query
+        description: tableID
+        required: true
+        schema:
+          $ref: '#/components/schemas/tableID'
+      - name: tabKey_since
+        in: query
+        description: 'Paging: continue after this value'
+        required: false
+        schema:
+          $ref: '#/components/schemas/tabKey'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminListRefTablesResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    post:
+      summary: Create a reference entry
+      operationId: adminNewRefTable
+      tags:
+      - admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminNewRefTableRequest'
+      responses:
+        '201':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminNewRefTableResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+  /admin/refTables/{tableID}:
+    summary: 'Admin: refTables'
+    put:
+      summary: Update a reference entry
+      operationId: adminUpdateRefTable
+      tags:
+      - admin
+      parameters:
+      - name: tableID
+        in: path
+        description: tableID
+        required: true
+        schema:
+          $ref: '#/components/schemas/tableID'
+      - name: tabKey
+        in: query
+        description: tabKey
+        required: true
+        schema:
+          $ref: '#/components/schemas/tabKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateRefTableRequest'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUpdateRefTableResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+    delete:
+      summary: Delete a reference entry not in use
+      operationId: adminDeleteRefTable
+      tags:
+      - admin
+      parameters:
+      - name: tableID
+        in: path
+        description: tableID
+        required: true
+        schema:
+          $ref: '#/components/schemas/tableID'
+      - name: tabKey
+        in: query
+        description: tabKey
+        required: true
+        schema:
+          $ref: '#/components/schemas/tabKey'
+      responses:
+        '200':
+          description: Successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '409':
+          description: 'Conflict: duplicate, in use, or not possible in this state'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortResponse'
+        default:
+          description: Unexpected error
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token from POST /token, or from LWW's sign-in (RACF or Entra)
+  schemas:
+    abendCode:
+      type: string
+      minLength: 0
+      maxLength: 5
+      description: Abend code, for example S0C4 or U0100
+    accessGroup:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: RACF group of members, from RACFGRP
+    activeDeplID:
+      type: integer
+      description: Deployment running or failed here; 0 = none
+    appCode:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: Short code, upper case; ${LWDAPP} in JCL
+    appDescription:
+      type: string
+      minLength: 0
+      maxLength: 1000
+      description: Description
+    appID:
+      type: integer
+      description: Application key
+    appName:
+      type: string
+      minLength: 0
+      maxLength: 60
+      description: Name
+    approvalCount:
+      type: integer
+      description: Number of approvals needed; 0 = none
+    approvalReq:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: deployments need approval'
+    approvalsWaiting:
+      type: integer
+      description: Deployments waiting for my approval
+    approvedCount:
+      type: integer
+      description: Approvals so far
+    approverGroup:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: RACF group of approvers, from RACFGRP
+    canApprove:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: the user may approve here'
+    canCancel:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: the user may cancel this deployment now'
+    canDeploy:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: the user may request deployments here'
+    canRetry:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: the user may retry or continue this deployment now'
+    changeNote:
+      type: string
+      minLength: 0
+      maxLength: 255
+      description: Why it was changed
+    commentText:
+      type: string
+      minLength: 0
+      maxLength: 255
+      description: Comment or reason
+    createdBy:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: RACF userid
+    createdDate:
+      type: string
+      minLength: 0
+      maxLength: 26
+      description: Set by DB2
+      example: 2026-01-01-00.00.00.000000
+    currentDeplID:
+      type: integer
+      description: Last succeeded deployment; 0 = none
+    currentRev:
+      type: integer
+      description: Revision used by new deployments; 0 = no JCL yet
+    currentVersionID:
+      type: integer
+      description: Version last deployed successfully; 0 = none
+    currentVersionName:
+      type: string
+      minLength: 0
+      maxLength: 30
+      description: Its name
+    ddName:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: DD name
+    decision:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: A approve, R reject
+    deplID:
+      type: integer
+      description: Deployment key
+    deployedDate:
+      type: string
+      minLength: 0
+      maxLength: 26
+      description: When it was deployed
+      example: 2026-01-01-00.00.00.000000
+    deployerGroup:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: RACF group that may deploy; empty = every member
+    deployUser:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: Deploy userid, from DEPLUSER; empty = can't deploy yet
+    deplStatus:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: W awaiting approval, J rejected, E expired, Q queued, U running, F failed, S succeeded,
+        C cancelled
+    email:
+      type: string
+      minLength: 0
+      maxLength: 254
+      description: Email address from RACF (WORKATTR WAEMAIL); empty = no mail
+    endedDate:
+      type: string
+      minLength: 0
+      maxLength: 26
+      description: Ended
+      example: 2026-01-01-00.00.00.000000
+    envCode:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: Short code, upper case; ${LWDENV} in JCL
+    envDescription:
+      type: string
+      minLength: 0
+      maxLength: 1000
+      description: Description
+    envID:
+      type: integer
+      description: Environment key; 0 = none
+    envName:
+      type: string
+      minLength: 0
+      maxLength: 60
+      description: Name
+    envState:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: N never deployed, O ok, H possibly half deployed
+    eventNo:
+      type: integer
+      description: Event number
+    eventType:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: R requested, A approved, J rejected, Q queued, U started, T retried, K continued, C
+        cancelled, E expired, S succeeded, F failed
+    expiredCount:
+      type: integer
+      description: Deployments that waited too long for approval and expired
+    fileNo:
+      type: integer
+      description: Spool file number
+    firstLineNum:
+      type: integer
+      description: Number of the first line in this part
+    flushed:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: not executed'
+    infoMessage:
+      type: string
+      minLength: 0
+      maxLength: 72
+      description: Result text
+    isAdmin:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: administrator'
+    isApprover:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: in the approver group of at least one environment'
+    isMember:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: in the access group'
+    isOwner:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: in the owner group'
+    isUsed:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: requested for deployment at least once; can''t be changed'
+    jcl:
+      type: string
+      minLength: 0
+      maxLength: 32400
+      description: 'JCL: UTF-8 text, lines of at most 80 characters separated by LF, at most 300 lines,
+        base64 encoded'
+      contentEncoding: base64
+      contentMediaType: text/plain
+    jesJobID:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: JES job ID
+    jobMessage:
+      type: string
+      minLength: 0
+      maxLength: 72
+      description: Message, for example why the submit failed
+    jobName:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: Job name
+    jobNo:
+      type: integer
+      description: Job number in the deployment, 1, 2, ...
+    jobRC:
+      type: integer
+      description: Highest return code; -1 = not known
+    jobResult:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: O within the highest RC, H above it, A abend, X submit failed, T no result in time;
+        empty = not ended
+    jobStatus:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: W waiting, S submitted, D done, F failed, K skipped
+    jobTitle:
+      type: string
+      minLength: 0
+      maxLength: 60
+      description: Template name at the time of the request
+    lastRunID:
+      type: integer
+      description: Latest run; 0 = none
+    lineCount:
+      type: integer
+      description: Number of lines
+    lineNum:
+      type: integer
+      description: Line number
+    location:
+      type: string
+      minLength: 0
+      maxLength: 255
+      description: Dataset prefix or USS path; ${LWDLOC} in JCL
+    locType:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: D dataset prefix, U USS path
+    maxRC:
+      type: integer
+      description: Highest acceptable return code
+    moreDue:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: more queued deployments can start: call again'
+    moreLines:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: there are more lines after this part'
+    nextRunID:
+      type: integer
+      description: Run of the next job, handed to the CICS submit task; 0 = none
+    notifyApp:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: mail when a deployment of an application I own ends'
+    notifyApprove:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: mail when an approval waits for me'
+    notifyOwn:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: mail when my deployment is decided or ends'
+    outputStatus:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: W waiting, C collected, N none found, P purged
+    ownerGroup:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: RACF group of owners, from RACFGRP
+    password:
+      type: string
+      minLength: 0
+      maxLength: 100
+      description: RACF passphrase; never logged or stored
+    pgmName:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: Program
+    procStep:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: Procedure step
+    promoGate:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: the version must have succeeded in the previous environment'
+    reasonCode:
+      type: string
+      minLength: 0
+      maxLength: 2
+      description: Reason code
+      example: '00'
+    requestedBy:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: Requester
+    requestedDate:
+      type: string
+      minLength: 0
+      maxLength: 26
+      description: Requested
+      example: 2026-01-01-00.00.00.000000
+    requestNote:
+      type: string
+      minLength: 0
+      maxLength: 255
+      description: Why, from the requester
+    retCode:
+      type: string
+      minLength: 0
+      maxLength: 2
+      description: Return code
+      example: '00'
+    revision:
+      type: integer
+      description: Template revision; 0 = current
+    runID:
+      type: integer
+      description: Run key
+    runStatus:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: N new, S submitted, E ended, F failed
+    skipReason:
+      type: string
+      minLength: 0
+      maxLength: 255
+      description: Why the job was skipped
+    sortOrder:
+      type: integer
+      description: Position in the order
+    spoolText:
+      type: string
+      minLength: 0
+      maxLength: 32000
+      description: 'At most 300 whole lines of output: UTF-8 text, separated by LF, base64 encoded'
+      contentEncoding: base64
+      contentMediaType: text/plain
+    startAfter:
+      type: string
+      minLength: 0
+      maxLength: 26
+      description: Requested start; empty in a request = now
+      example: 2026-01-01-00.00.00.000000
+    startedDate:
+      type: string
+      minLength: 0
+      maxLength: 26
+      description: First job submitted
+      example: 2026-01-01-00.00.00.000000
+    startedDeplID:
+      type: integer
+      description: Deployment started by this tick; 0 = none
+    stepName:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: Step
+    stepNo:
+      type: integer
+      description: Step number
+    stepRC:
+      type: integer
+      description: Return code; -1 = not known or not executed
+    stuckCount:
+      type: integer
+      description: Runs without a result in time, now failed
+    submittedDate:
+      type: string
+      minLength: 0
+      maxLength: 26
+      description: Submitted
+      example: 2026-01-01-00.00.00.000000
+    tabKey:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: Key in the list
+    tableID:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: 'List: RACFGRP, DEPLUSER or SETTINGS'
+    tabValue:
+      type: string
+      minLength: 0
+      maxLength: 255
+      description: Value or description
+    templateID:
+      type: integer
+      description: Template key
+    templateName:
+      type: string
+      minLength: 0
+      maxLength: 60
+      description: Name
+    templateRev:
+      type: integer
+      description: Template revision that was frozen
+    templateStatus:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: A active, D deleted
+    token:
+      type: string
+      minLength: 0
+      maxLength: 1024
+      description: Access token
+    truncated:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: 'Y: cut off at the OUTLINES setting'
+    updatedBy:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: RACF userid
+    updatedDate:
+      type: string
+      minLength: 0
+      maxLength: 26
+      description: Set by DB2
+      example: 2026-01-01-00.00.00.000000
+    userID:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: RACF userid
+    username:
+      type: string
+      minLength: 0
+      maxLength: 8
+      description: RACF userid
+    varDescription:
+      type: string
+      minLength: 0
+      maxLength: 255
+      description: What it is for
+    varID:
+      type: integer
+      description: Variable key
+    varName:
+      type: string
+      minLength: 0
+      maxLength: 16
+      description: Name, A-Z 0-9 _, starting with a letter; not starting with LWD
+    varValue:
+      type: string
+      minLength: 0
+      maxLength: 255
+      description: Value; never secret
+    versionDescription:
+      type: string
+      minLength: 0
+      maxLength: 1000
+      description: Description, for example the commit
+    versionID:
+      type: integer
+      description: Version key; 0 = none
+    versionName:
+      type: string
+      minLength: 0
+      maxLength: 30
+      description: Name, upper case A-Z 0-9 . _ -; ${LWDVER} in JCL
+    versionStatus:
+      type: string
+      minLength: 0
+      maxLength: 1
+      description: A active, R retired
+    warningCount:
+      type: integer
+      description: Warnings found; the first is in infoMessage
+    ShortResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+    NewAccessTokenRequest:
+      type: object
+      properties:
+        username:
+          $ref: '#/components/schemas/username'
+        password:
+          $ref: '#/components/schemas/password'
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          $ref: '#/components/schemas/token'
+    GetCurrentUserResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        userID:
+          $ref: '#/components/schemas/userID'
+        email:
+          $ref: '#/components/schemas/email'
+        notifyApprove:
+          $ref: '#/components/schemas/notifyApprove'
+        notifyOwn:
+          $ref: '#/components/schemas/notifyOwn'
+        notifyApp:
+          $ref: '#/components/schemas/notifyApp'
+        isAdmin:
+          $ref: '#/components/schemas/isAdmin'
+        approvalsWaiting:
+          $ref: '#/components/schemas/approvalsWaiting'
+    UpdateCurrentUserRequest:
+      type: object
+      properties:
+        notifyApprove:
+          $ref: '#/components/schemas/notifyApprove'
+        notifyOwn:
+          $ref: '#/components/schemas/notifyOwn'
+        notifyApp:
+          $ref: '#/components/schemas/notifyApp'
+    UpdateCurrentUserResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        userID:
+          $ref: '#/components/schemas/userID'
+        email:
+          $ref: '#/components/schemas/email'
+        notifyApprove:
+          $ref: '#/components/schemas/notifyApprove'
+        notifyOwn:
+          $ref: '#/components/schemas/notifyOwn'
+        notifyApp:
+          $ref: '#/components/schemas/notifyApp'
+        isAdmin:
+          $ref: '#/components/schemas/isAdmin'
+        approvalsWaiting:
+          $ref: '#/components/schemas/approvalsWaiting'
+    ListApplicationsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        applications:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              appID:
+                $ref: '#/components/schemas/appID'
+              appCode:
+                $ref: '#/components/schemas/appCode'
+              appName:
+                $ref: '#/components/schemas/appName'
+              isMember:
+                $ref: '#/components/schemas/isMember'
+              isOwner:
+                $ref: '#/components/schemas/isOwner'
+              isApprover:
+                $ref: '#/components/schemas/isApprover'
+    GetApplicationResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        appID:
+          $ref: '#/components/schemas/appID'
+        appCode:
+          $ref: '#/components/schemas/appCode'
+        appName:
+          $ref: '#/components/schemas/appName'
+        appDescription:
+          $ref: '#/components/schemas/appDescription'
+        accessGroup:
+          $ref: '#/components/schemas/accessGroup'
+        ownerGroup:
+          $ref: '#/components/schemas/ownerGroup'
+        isMember:
+          $ref: '#/components/schemas/isMember'
+        isOwner:
+          $ref: '#/components/schemas/isOwner'
+        isApprover:
+          $ref: '#/components/schemas/isApprover'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    ListEnvironmentsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        environments:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              envID:
+                $ref: '#/components/schemas/envID'
+              envCode:
+                $ref: '#/components/schemas/envCode'
+              envName:
+                $ref: '#/components/schemas/envName'
+              sortOrder:
+                $ref: '#/components/schemas/sortOrder'
+              promoGate:
+                $ref: '#/components/schemas/promoGate'
+              approvalReq:
+                $ref: '#/components/schemas/approvalReq'
+              approvalCount:
+                $ref: '#/components/schemas/approvalCount'
+              envState:
+                $ref: '#/components/schemas/envState'
+              currentVersionID:
+                $ref: '#/components/schemas/currentVersionID'
+              currentVersionName:
+                $ref: '#/components/schemas/currentVersionName'
+              currentDeplID:
+                $ref: '#/components/schemas/currentDeplID'
+              deployedDate:
+                $ref: '#/components/schemas/deployedDate'
+              activeDeplID:
+                $ref: '#/components/schemas/activeDeplID'
+              canDeploy:
+                $ref: '#/components/schemas/canDeploy'
+              canApprove:
+                $ref: '#/components/schemas/canApprove'
+    GetEnvironmentResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        envID:
+          $ref: '#/components/schemas/envID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        envCode:
+          $ref: '#/components/schemas/envCode'
+        envName:
+          $ref: '#/components/schemas/envName'
+        envDescription:
+          $ref: '#/components/schemas/envDescription'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        promoGate:
+          $ref: '#/components/schemas/promoGate'
+        deployUser:
+          $ref: '#/components/schemas/deployUser'
+        approvalReq:
+          $ref: '#/components/schemas/approvalReq'
+        approverGroup:
+          $ref: '#/components/schemas/approverGroup'
+        approvalCount:
+          $ref: '#/components/schemas/approvalCount'
+        deployerGroup:
+          $ref: '#/components/schemas/deployerGroup'
+        envState:
+          $ref: '#/components/schemas/envState'
+        currentVersionID:
+          $ref: '#/components/schemas/currentVersionID'
+        currentVersionName:
+          $ref: '#/components/schemas/currentVersionName'
+        currentDeplID:
+          $ref: '#/components/schemas/currentDeplID'
+        deployedDate:
+          $ref: '#/components/schemas/deployedDate'
+        activeDeplID:
+          $ref: '#/components/schemas/activeDeplID'
+        canDeploy:
+          $ref: '#/components/schemas/canDeploy'
+        canApprove:
+          $ref: '#/components/schemas/canApprove'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    NewEnvironmentRequest:
+      type: object
+      properties:
+        appID:
+          $ref: '#/components/schemas/appID'
+        envCode:
+          $ref: '#/components/schemas/envCode'
+        envName:
+          $ref: '#/components/schemas/envName'
+        envDescription:
+          $ref: '#/components/schemas/envDescription'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        promoGate:
+          $ref: '#/components/schemas/promoGate'
+    NewEnvironmentResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        envID:
+          $ref: '#/components/schemas/envID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        envCode:
+          $ref: '#/components/schemas/envCode'
+        envName:
+          $ref: '#/components/schemas/envName'
+        envDescription:
+          $ref: '#/components/schemas/envDescription'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        promoGate:
+          $ref: '#/components/schemas/promoGate'
+        deployUser:
+          $ref: '#/components/schemas/deployUser'
+        approvalReq:
+          $ref: '#/components/schemas/approvalReq'
+        approverGroup:
+          $ref: '#/components/schemas/approverGroup'
+        approvalCount:
+          $ref: '#/components/schemas/approvalCount'
+        deployerGroup:
+          $ref: '#/components/schemas/deployerGroup'
+        envState:
+          $ref: '#/components/schemas/envState'
+        currentVersionID:
+          $ref: '#/components/schemas/currentVersionID'
+        currentVersionName:
+          $ref: '#/components/schemas/currentVersionName'
+        currentDeplID:
+          $ref: '#/components/schemas/currentDeplID'
+        deployedDate:
+          $ref: '#/components/schemas/deployedDate'
+        activeDeplID:
+          $ref: '#/components/schemas/activeDeplID'
+        canDeploy:
+          $ref: '#/components/schemas/canDeploy'
+        canApprove:
+          $ref: '#/components/schemas/canApprove'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    UpdateEnvironmentRequest:
+      type: object
+      properties:
+        envCode:
+          $ref: '#/components/schemas/envCode'
+        envName:
+          $ref: '#/components/schemas/envName'
+        envDescription:
+          $ref: '#/components/schemas/envDescription'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        promoGate:
+          $ref: '#/components/schemas/promoGate'
+    UpdateEnvironmentResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        envID:
+          $ref: '#/components/schemas/envID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        envCode:
+          $ref: '#/components/schemas/envCode'
+        envName:
+          $ref: '#/components/schemas/envName'
+        envDescription:
+          $ref: '#/components/schemas/envDescription'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        promoGate:
+          $ref: '#/components/schemas/promoGate'
+        deployUser:
+          $ref: '#/components/schemas/deployUser'
+        approvalReq:
+          $ref: '#/components/schemas/approvalReq'
+        approverGroup:
+          $ref: '#/components/schemas/approverGroup'
+        approvalCount:
+          $ref: '#/components/schemas/approvalCount'
+        deployerGroup:
+          $ref: '#/components/schemas/deployerGroup'
+        envState:
+          $ref: '#/components/schemas/envState'
+        currentVersionID:
+          $ref: '#/components/schemas/currentVersionID'
+        currentVersionName:
+          $ref: '#/components/schemas/currentVersionName'
+        currentDeplID:
+          $ref: '#/components/schemas/currentDeplID'
+        deployedDate:
+          $ref: '#/components/schemas/deployedDate'
+        activeDeplID:
+          $ref: '#/components/schemas/activeDeplID'
+        canDeploy:
+          $ref: '#/components/schemas/canDeploy'
+        canApprove:
+          $ref: '#/components/schemas/canApprove'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    ListVersionsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        versions:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              versionID:
+                $ref: '#/components/schemas/versionID'
+              versionName:
+                $ref: '#/components/schemas/versionName'
+              locType:
+                $ref: '#/components/schemas/locType'
+              location:
+                $ref: '#/components/schemas/location'
+              versionStatus:
+                $ref: '#/components/schemas/versionStatus'
+              isUsed:
+                $ref: '#/components/schemas/isUsed'
+              createdBy:
+                $ref: '#/components/schemas/createdBy'
+              createdDate:
+                $ref: '#/components/schemas/createdDate'
+    GetVersionResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        versionID:
+          $ref: '#/components/schemas/versionID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        versionName:
+          $ref: '#/components/schemas/versionName'
+        locType:
+          $ref: '#/components/schemas/locType'
+        location:
+          $ref: '#/components/schemas/location'
+        versionDescription:
+          $ref: '#/components/schemas/versionDescription'
+        versionStatus:
+          $ref: '#/components/schemas/versionStatus'
+        isUsed:
+          $ref: '#/components/schemas/isUsed'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    NewVersionRequest:
+      type: object
+      properties:
+        appID:
+          $ref: '#/components/schemas/appID'
+        versionName:
+          $ref: '#/components/schemas/versionName'
+        locType:
+          $ref: '#/components/schemas/locType'
+        location:
+          $ref: '#/components/schemas/location'
+        versionDescription:
+          $ref: '#/components/schemas/versionDescription'
+    NewVersionResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        versionID:
+          $ref: '#/components/schemas/versionID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        versionName:
+          $ref: '#/components/schemas/versionName'
+        locType:
+          $ref: '#/components/schemas/locType'
+        location:
+          $ref: '#/components/schemas/location'
+        versionDescription:
+          $ref: '#/components/schemas/versionDescription'
+        versionStatus:
+          $ref: '#/components/schemas/versionStatus'
+        isUsed:
+          $ref: '#/components/schemas/isUsed'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    UpdateVersionRequest:
+      type: object
+      properties:
+        versionName:
+          $ref: '#/components/schemas/versionName'
+        locType:
+          $ref: '#/components/schemas/locType'
+        location:
+          $ref: '#/components/schemas/location'
+        versionDescription:
+          $ref: '#/components/schemas/versionDescription'
+    UpdateVersionResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        versionID:
+          $ref: '#/components/schemas/versionID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        versionName:
+          $ref: '#/components/schemas/versionName'
+        locType:
+          $ref: '#/components/schemas/locType'
+        location:
+          $ref: '#/components/schemas/location'
+        versionDescription:
+          $ref: '#/components/schemas/versionDescription'
+        versionStatus:
+          $ref: '#/components/schemas/versionStatus'
+        isUsed:
+          $ref: '#/components/schemas/isUsed'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    RetireVersionResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        versionID:
+          $ref: '#/components/schemas/versionID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        versionName:
+          $ref: '#/components/schemas/versionName'
+        locType:
+          $ref: '#/components/schemas/locType'
+        location:
+          $ref: '#/components/schemas/location'
+        versionDescription:
+          $ref: '#/components/schemas/versionDescription'
+        versionStatus:
+          $ref: '#/components/schemas/versionStatus'
+        isUsed:
+          $ref: '#/components/schemas/isUsed'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    ListVariablesResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        variables:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              varID:
+                $ref: '#/components/schemas/varID'
+              appID:
+                $ref: '#/components/schemas/appID'
+              envID:
+                $ref: '#/components/schemas/envID'
+              versionID:
+                $ref: '#/components/schemas/versionID'
+              varName:
+                $ref: '#/components/schemas/varName'
+              varValue:
+                $ref: '#/components/schemas/varValue'
+              varDescription:
+                $ref: '#/components/schemas/varDescription'
+              createdBy:
+                $ref: '#/components/schemas/createdBy'
+              createdDate:
+                $ref: '#/components/schemas/createdDate'
+              updatedBy:
+                $ref: '#/components/schemas/updatedBy'
+              updatedDate:
+                $ref: '#/components/schemas/updatedDate'
+    NewVariableRequest:
+      type: object
+      properties:
+        appID:
+          $ref: '#/components/schemas/appID'
+        envID:
+          $ref: '#/components/schemas/envID'
+        versionID:
+          $ref: '#/components/schemas/versionID'
+        varName:
+          $ref: '#/components/schemas/varName'
+        varValue:
+          $ref: '#/components/schemas/varValue'
+        varDescription:
+          $ref: '#/components/schemas/varDescription'
+    NewVariableResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        varID:
+          $ref: '#/components/schemas/varID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        envID:
+          $ref: '#/components/schemas/envID'
+        versionID:
+          $ref: '#/components/schemas/versionID'
+        varName:
+          $ref: '#/components/schemas/varName'
+        varValue:
+          $ref: '#/components/schemas/varValue'
+        varDescription:
+          $ref: '#/components/schemas/varDescription'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    UpdateVariableRequest:
+      type: object
+      properties:
+        varName:
+          $ref: '#/components/schemas/varName'
+        varValue:
+          $ref: '#/components/schemas/varValue'
+        varDescription:
+          $ref: '#/components/schemas/varDescription'
+    UpdateVariableResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        varID:
+          $ref: '#/components/schemas/varID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        envID:
+          $ref: '#/components/schemas/envID'
+        versionID:
+          $ref: '#/components/schemas/versionID'
+        varName:
+          $ref: '#/components/schemas/varName'
+        varValue:
+          $ref: '#/components/schemas/varValue'
+        varDescription:
+          $ref: '#/components/schemas/varDescription'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    ListTemplatesResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        templates:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              templateID:
+                $ref: '#/components/schemas/templateID'
+              templateName:
+                $ref: '#/components/schemas/templateName'
+              sortOrder:
+                $ref: '#/components/schemas/sortOrder'
+              maxRC:
+                $ref: '#/components/schemas/maxRC'
+              currentRev:
+                $ref: '#/components/schemas/currentRev'
+              updatedBy:
+                $ref: '#/components/schemas/updatedBy'
+              updatedDate:
+                $ref: '#/components/schemas/updatedDate'
+    GetTemplateResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        templateID:
+          $ref: '#/components/schemas/templateID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        templateName:
+          $ref: '#/components/schemas/templateName'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        maxRC:
+          $ref: '#/components/schemas/maxRC'
+        currentRev:
+          $ref: '#/components/schemas/currentRev'
+        templateStatus:
+          $ref: '#/components/schemas/templateStatus'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    NewTemplateRequest:
+      type: object
+      properties:
+        appID:
+          $ref: '#/components/schemas/appID'
+        templateName:
+          $ref: '#/components/schemas/templateName'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        maxRC:
+          $ref: '#/components/schemas/maxRC'
+    NewTemplateResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        templateID:
+          $ref: '#/components/schemas/templateID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        templateName:
+          $ref: '#/components/schemas/templateName'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        maxRC:
+          $ref: '#/components/schemas/maxRC'
+        currentRev:
+          $ref: '#/components/schemas/currentRev'
+        templateStatus:
+          $ref: '#/components/schemas/templateStatus'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    UpdateTemplateRequest:
+      type: object
+      properties:
+        templateName:
+          $ref: '#/components/schemas/templateName'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        maxRC:
+          $ref: '#/components/schemas/maxRC'
+    UpdateTemplateResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        templateID:
+          $ref: '#/components/schemas/templateID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        templateName:
+          $ref: '#/components/schemas/templateName'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        maxRC:
+          $ref: '#/components/schemas/maxRC'
+        currentRev:
+          $ref: '#/components/schemas/currentRev'
+        templateStatus:
+          $ref: '#/components/schemas/templateStatus'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    ListTemplateRevisionsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        revisions:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              revision:
+                $ref: '#/components/schemas/revision'
+              changeNote:
+                $ref: '#/components/schemas/changeNote'
+              lineCount:
+                $ref: '#/components/schemas/lineCount'
+              createdBy:
+                $ref: '#/components/schemas/createdBy'
+              createdDate:
+                $ref: '#/components/schemas/createdDate'
+    GetTemplateJclResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        templateID:
+          $ref: '#/components/schemas/templateID'
+        revision:
+          $ref: '#/components/schemas/revision'
+        lineCount:
+          $ref: '#/components/schemas/lineCount'
+        jcl:
+          $ref: '#/components/schemas/jcl'
+    NewTemplateJclRequest:
+      type: object
+      required:
+      - jcl
+      properties:
+        jcl:
+          $ref: '#/components/schemas/jcl'
+        changeNote:
+          $ref: '#/components/schemas/changeNote'
+    NewTemplateJclResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        templateID:
+          $ref: '#/components/schemas/templateID'
+        revision:
+          $ref: '#/components/schemas/revision'
+        lineCount:
+          $ref: '#/components/schemas/lineCount'
+        warningCount:
+          $ref: '#/components/schemas/warningCount'
+    ListDeploymentsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        deployments:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              deplID:
+                $ref: '#/components/schemas/deplID'
+              appID:
+                $ref: '#/components/schemas/appID'
+              appCode:
+                $ref: '#/components/schemas/appCode'
+              envID:
+                $ref: '#/components/schemas/envID'
+              envCode:
+                $ref: '#/components/schemas/envCode'
+              versionID:
+                $ref: '#/components/schemas/versionID'
+              versionName:
+                $ref: '#/components/schemas/versionName'
+              deplStatus:
+                $ref: '#/components/schemas/deplStatus'
+              startAfter:
+                $ref: '#/components/schemas/startAfter'
+              requestedBy:
+                $ref: '#/components/schemas/requestedBy'
+              requestedDate:
+                $ref: '#/components/schemas/requestedDate'
+              endedDate:
+                $ref: '#/components/schemas/endedDate'
+    GetDeploymentResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        deplID:
+          $ref: '#/components/schemas/deplID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        appCode:
+          $ref: '#/components/schemas/appCode'
+        appName:
+          $ref: '#/components/schemas/appName'
+        envID:
+          $ref: '#/components/schemas/envID'
+        envCode:
+          $ref: '#/components/schemas/envCode'
+        envName:
+          $ref: '#/components/schemas/envName'
+        versionID:
+          $ref: '#/components/schemas/versionID'
+        versionName:
+          $ref: '#/components/schemas/versionName'
+        location:
+          $ref: '#/components/schemas/location'
+        deplStatus:
+          $ref: '#/components/schemas/deplStatus'
+        startAfter:
+          $ref: '#/components/schemas/startAfter'
+        requestNote:
+          $ref: '#/components/schemas/requestNote'
+        deployUser:
+          $ref: '#/components/schemas/deployUser'
+        approverGroup:
+          $ref: '#/components/schemas/approverGroup'
+        approvalCount:
+          $ref: '#/components/schemas/approvalCount'
+        approvedCount:
+          $ref: '#/components/schemas/approvedCount'
+        startedDate:
+          $ref: '#/components/schemas/startedDate'
+        endedDate:
+          $ref: '#/components/schemas/endedDate'
+        requestedBy:
+          $ref: '#/components/schemas/requestedBy'
+        requestedDate:
+          $ref: '#/components/schemas/requestedDate'
+        canCancel:
+          $ref: '#/components/schemas/canCancel'
+        canRetry:
+          $ref: '#/components/schemas/canRetry'
+        canApprove:
+          $ref: '#/components/schemas/canApprove'
+    NewDeploymentRequest:
+      type: object
+      properties:
+        appID:
+          $ref: '#/components/schemas/appID'
+        envID:
+          $ref: '#/components/schemas/envID'
+        versionID:
+          $ref: '#/components/schemas/versionID'
+        startAfter:
+          $ref: '#/components/schemas/startAfter'
+        requestNote:
+          $ref: '#/components/schemas/requestNote'
+    NewDeploymentResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        deplID:
+          $ref: '#/components/schemas/deplID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        appCode:
+          $ref: '#/components/schemas/appCode'
+        appName:
+          $ref: '#/components/schemas/appName'
+        envID:
+          $ref: '#/components/schemas/envID'
+        envCode:
+          $ref: '#/components/schemas/envCode'
+        envName:
+          $ref: '#/components/schemas/envName'
+        versionID:
+          $ref: '#/components/schemas/versionID'
+        versionName:
+          $ref: '#/components/schemas/versionName'
+        location:
+          $ref: '#/components/schemas/location'
+        deplStatus:
+          $ref: '#/components/schemas/deplStatus'
+        startAfter:
+          $ref: '#/components/schemas/startAfter'
+        requestNote:
+          $ref: '#/components/schemas/requestNote'
+        deployUser:
+          $ref: '#/components/schemas/deployUser'
+        approverGroup:
+          $ref: '#/components/schemas/approverGroup'
+        approvalCount:
+          $ref: '#/components/schemas/approvalCount'
+        approvedCount:
+          $ref: '#/components/schemas/approvedCount'
+        startedDate:
+          $ref: '#/components/schemas/startedDate'
+        endedDate:
+          $ref: '#/components/schemas/endedDate'
+        requestedBy:
+          $ref: '#/components/schemas/requestedBy'
+        requestedDate:
+          $ref: '#/components/schemas/requestedDate'
+        canCancel:
+          $ref: '#/components/schemas/canCancel'
+        canRetry:
+          $ref: '#/components/schemas/canRetry'
+        canApprove:
+          $ref: '#/components/schemas/canApprove'
+    CancelDeploymentRequest:
+      type: object
+      properties:
+        commentText:
+          $ref: '#/components/schemas/commentText'
+    CancelDeploymentResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        deplID:
+          $ref: '#/components/schemas/deplID'
+        deplStatus:
+          $ref: '#/components/schemas/deplStatus'
+    RetryDeploymentRequest:
+      type: object
+      properties:
+        commentText:
+          $ref: '#/components/schemas/commentText'
+    RetryDeploymentResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        deplID:
+          $ref: '#/components/schemas/deplID'
+        deplStatus:
+          $ref: '#/components/schemas/deplStatus'
+    ContinueDeploymentRequest:
+      type: object
+      properties:
+        commentText:
+          $ref: '#/components/schemas/commentText'
+    ContinueDeploymentResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        deplID:
+          $ref: '#/components/schemas/deplID'
+        deplStatus:
+          $ref: '#/components/schemas/deplStatus'
+    ListDeploymentJobsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        jobs:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              jobNo:
+                $ref: '#/components/schemas/jobNo'
+              jobTitle:
+                $ref: '#/components/schemas/jobTitle'
+              templateID:
+                $ref: '#/components/schemas/templateID'
+              templateRev:
+                $ref: '#/components/schemas/templateRev'
+              maxRC:
+                $ref: '#/components/schemas/maxRC'
+              jobStatus:
+                $ref: '#/components/schemas/jobStatus'
+              lineCount:
+                $ref: '#/components/schemas/lineCount'
+              lastRunID:
+                $ref: '#/components/schemas/lastRunID'
+              runStatus:
+                $ref: '#/components/schemas/runStatus'
+              jobResult:
+                $ref: '#/components/schemas/jobResult'
+              jobRC:
+                $ref: '#/components/schemas/jobRC'
+              abendCode:
+                $ref: '#/components/schemas/abendCode'
+              skipReason:
+                $ref: '#/components/schemas/skipReason'
+    GetDeploymentJclResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        deplID:
+          $ref: '#/components/schemas/deplID'
+        jobNo:
+          $ref: '#/components/schemas/jobNo'
+        lineCount:
+          $ref: '#/components/schemas/lineCount'
+        jcl:
+          $ref: '#/components/schemas/jcl'
+    ListDeploymentEventsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        events:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              eventNo:
+                $ref: '#/components/schemas/eventNo'
+              eventType:
+                $ref: '#/components/schemas/eventType'
+              jobNo:
+                $ref: '#/components/schemas/jobNo'
+              commentText:
+                $ref: '#/components/schemas/commentText'
+              createdBy:
+                $ref: '#/components/schemas/createdBy'
+              createdDate:
+                $ref: '#/components/schemas/createdDate'
+    ListApprovalRequestsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        approvalRequests:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              deplID:
+                $ref: '#/components/schemas/deplID'
+              appID:
+                $ref: '#/components/schemas/appID'
+              appCode:
+                $ref: '#/components/schemas/appCode'
+              appName:
+                $ref: '#/components/schemas/appName'
+              envID:
+                $ref: '#/components/schemas/envID'
+              envCode:
+                $ref: '#/components/schemas/envCode'
+              envName:
+                $ref: '#/components/schemas/envName'
+              versionName:
+                $ref: '#/components/schemas/versionName'
+              approvedCount:
+                $ref: '#/components/schemas/approvedCount'
+              approvalCount:
+                $ref: '#/components/schemas/approvalCount'
+              startAfter:
+                $ref: '#/components/schemas/startAfter'
+              requestedBy:
+                $ref: '#/components/schemas/requestedBy'
+              requestedDate:
+                $ref: '#/components/schemas/requestedDate'
+    ListApprovalsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        approvals:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              userID:
+                $ref: '#/components/schemas/userID'
+              decision:
+                $ref: '#/components/schemas/decision'
+              commentText:
+                $ref: '#/components/schemas/commentText'
+              createdDate:
+                $ref: '#/components/schemas/createdDate'
+    NewApprovalRequest:
+      type: object
+      properties:
+        deplID:
+          $ref: '#/components/schemas/deplID'
+        decision:
+          $ref: '#/components/schemas/decision'
+        commentText:
+          $ref: '#/components/schemas/commentText'
+    NewApprovalResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        deplID:
+          $ref: '#/components/schemas/deplID'
+        deplStatus:
+          $ref: '#/components/schemas/deplStatus'
+        approvedCount:
+          $ref: '#/components/schemas/approvedCount'
+        approvalCount:
+          $ref: '#/components/schemas/approvalCount'
+    ListJobRunsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        runs:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              runID:
+                $ref: '#/components/schemas/runID'
+              jobNo:
+                $ref: '#/components/schemas/jobNo'
+              jobName:
+                $ref: '#/components/schemas/jobName'
+              runStatus:
+                $ref: '#/components/schemas/runStatus'
+              jobResult:
+                $ref: '#/components/schemas/jobResult'
+              jesJobID:
+                $ref: '#/components/schemas/jesJobID'
+              submittedDate:
+                $ref: '#/components/schemas/submittedDate'
+              endedDate:
+                $ref: '#/components/schemas/endedDate'
+              jobRC:
+                $ref: '#/components/schemas/jobRC'
+              abendCode:
+                $ref: '#/components/schemas/abendCode'
+              jobMessage:
+                $ref: '#/components/schemas/jobMessage'
+              outputStatus:
+                $ref: '#/components/schemas/outputStatus'
+    ListJobStepsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        steps:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              stepNo:
+                $ref: '#/components/schemas/stepNo'
+              stepName:
+                $ref: '#/components/schemas/stepName'
+              procStep:
+                $ref: '#/components/schemas/procStep'
+              pgmName:
+                $ref: '#/components/schemas/pgmName'
+              stepRC:
+                $ref: '#/components/schemas/stepRC'
+              abendCode:
+                $ref: '#/components/schemas/abendCode'
+              flushed:
+                $ref: '#/components/schemas/flushed'
+    ListSpoolFilesResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        spoolFiles:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              fileNo:
+                $ref: '#/components/schemas/fileNo'
+              ddName:
+                $ref: '#/components/schemas/ddName'
+              stepName:
+                $ref: '#/components/schemas/stepName'
+              procStep:
+                $ref: '#/components/schemas/procStep'
+              lineCount:
+                $ref: '#/components/schemas/lineCount'
+              truncated:
+                $ref: '#/components/schemas/truncated'
+    GetSpoolTextResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        runID:
+          $ref: '#/components/schemas/runID'
+        fileNo:
+          $ref: '#/components/schemas/fileNo'
+        firstLineNum:
+          $ref: '#/components/schemas/firstLineNum'
+        lineCount:
+          $ref: '#/components/schemas/lineCount'
+        moreLines:
+          $ref: '#/components/schemas/moreLines'
+        spoolText:
+          $ref: '#/components/schemas/spoolText'
+    NewSchedulerTickResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        expiredCount:
+          $ref: '#/components/schemas/expiredCount'
+        stuckCount:
+          $ref: '#/components/schemas/stuckCount'
+        startedDeplID:
+          $ref: '#/components/schemas/startedDeplID'
+        moreDue:
+          $ref: '#/components/schemas/moreDue'
+    NewJobResultRequest:
+      type: object
+      properties:
+        runID:
+          $ref: '#/components/schemas/runID'
+        jobName:
+          $ref: '#/components/schemas/jobName'
+        jesJobID:
+          $ref: '#/components/schemas/jesJobID'
+        jobResult:
+          $ref: '#/components/schemas/jobResult'
+    NewJobResultResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        runID:
+          $ref: '#/components/schemas/runID'
+        runStatus:
+          $ref: '#/components/schemas/runStatus'
+        deplStatus:
+          $ref: '#/components/schemas/deplStatus'
+        nextRunID:
+          $ref: '#/components/schemas/nextRunID'
+    AdminListApplicationsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        applications:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              appID:
+                $ref: '#/components/schemas/appID'
+              appCode:
+                $ref: '#/components/schemas/appCode'
+              appName:
+                $ref: '#/components/schemas/appName'
+              accessGroup:
+                $ref: '#/components/schemas/accessGroup'
+              ownerGroup:
+                $ref: '#/components/schemas/ownerGroup'
+    AdminNewApplicationRequest:
+      type: object
+      properties:
+        appCode:
+          $ref: '#/components/schemas/appCode'
+        appName:
+          $ref: '#/components/schemas/appName'
+        appDescription:
+          $ref: '#/components/schemas/appDescription'
+        accessGroup:
+          $ref: '#/components/schemas/accessGroup'
+        ownerGroup:
+          $ref: '#/components/schemas/ownerGroup'
+    AdminNewApplicationResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        appID:
+          $ref: '#/components/schemas/appID'
+        appCode:
+          $ref: '#/components/schemas/appCode'
+        appName:
+          $ref: '#/components/schemas/appName'
+        appDescription:
+          $ref: '#/components/schemas/appDescription'
+        accessGroup:
+          $ref: '#/components/schemas/accessGroup'
+        ownerGroup:
+          $ref: '#/components/schemas/ownerGroup'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    AdminGetApplicationResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        appID:
+          $ref: '#/components/schemas/appID'
+        appCode:
+          $ref: '#/components/schemas/appCode'
+        appName:
+          $ref: '#/components/schemas/appName'
+        appDescription:
+          $ref: '#/components/schemas/appDescription'
+        accessGroup:
+          $ref: '#/components/schemas/accessGroup'
+        ownerGroup:
+          $ref: '#/components/schemas/ownerGroup'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    AdminUpdateApplicationRequest:
+      type: object
+      properties:
+        appCode:
+          $ref: '#/components/schemas/appCode'
+        appName:
+          $ref: '#/components/schemas/appName'
+        appDescription:
+          $ref: '#/components/schemas/appDescription'
+        accessGroup:
+          $ref: '#/components/schemas/accessGroup'
+        ownerGroup:
+          $ref: '#/components/schemas/ownerGroup'
+    AdminUpdateApplicationResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        appID:
+          $ref: '#/components/schemas/appID'
+        appCode:
+          $ref: '#/components/schemas/appCode'
+        appName:
+          $ref: '#/components/schemas/appName'
+        appDescription:
+          $ref: '#/components/schemas/appDescription'
+        accessGroup:
+          $ref: '#/components/schemas/accessGroup'
+        ownerGroup:
+          $ref: '#/components/schemas/ownerGroup'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    AdminUpdateEnvironmentControlsRequest:
+      type: object
+      properties:
+        deployUser:
+          $ref: '#/components/schemas/deployUser'
+        approvalReq:
+          $ref: '#/components/schemas/approvalReq'
+        approverGroup:
+          $ref: '#/components/schemas/approverGroup'
+        approvalCount:
+          $ref: '#/components/schemas/approvalCount'
+        deployerGroup:
+          $ref: '#/components/schemas/deployerGroup'
+    AdminUpdateEnvironmentControlsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        envID:
+          $ref: '#/components/schemas/envID'
+        appID:
+          $ref: '#/components/schemas/appID'
+        envCode:
+          $ref: '#/components/schemas/envCode'
+        envName:
+          $ref: '#/components/schemas/envName'
+        envDescription:
+          $ref: '#/components/schemas/envDescription'
+        sortOrder:
+          $ref: '#/components/schemas/sortOrder'
+        promoGate:
+          $ref: '#/components/schemas/promoGate'
+        deployUser:
+          $ref: '#/components/schemas/deployUser'
+        approvalReq:
+          $ref: '#/components/schemas/approvalReq'
+        approverGroup:
+          $ref: '#/components/schemas/approverGroup'
+        approvalCount:
+          $ref: '#/components/schemas/approvalCount'
+        deployerGroup:
+          $ref: '#/components/schemas/deployerGroup'
+        envState:
+          $ref: '#/components/schemas/envState'
+        currentVersionID:
+          $ref: '#/components/schemas/currentVersionID'
+        currentVersionName:
+          $ref: '#/components/schemas/currentVersionName'
+        currentDeplID:
+          $ref: '#/components/schemas/currentDeplID'
+        deployedDate:
+          $ref: '#/components/schemas/deployedDate'
+        activeDeplID:
+          $ref: '#/components/schemas/activeDeplID'
+        canDeploy:
+          $ref: '#/components/schemas/canDeploy'
+        canApprove:
+          $ref: '#/components/schemas/canApprove'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    AdminListDeploymentsResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        deployments:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              deplID:
+                $ref: '#/components/schemas/deplID'
+              appID:
+                $ref: '#/components/schemas/appID'
+              appCode:
+                $ref: '#/components/schemas/appCode'
+              envID:
+                $ref: '#/components/schemas/envID'
+              envCode:
+                $ref: '#/components/schemas/envCode'
+              versionID:
+                $ref: '#/components/schemas/versionID'
+              versionName:
+                $ref: '#/components/schemas/versionName'
+              deplStatus:
+                $ref: '#/components/schemas/deplStatus'
+              startAfter:
+                $ref: '#/components/schemas/startAfter'
+              requestedBy:
+                $ref: '#/components/schemas/requestedBy'
+              requestedDate:
+                $ref: '#/components/schemas/requestedDate'
+              endedDate:
+                $ref: '#/components/schemas/endedDate'
+    AdminListRefTablesResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        refTables:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              tableID:
+                $ref: '#/components/schemas/tableID'
+              tabKey:
+                $ref: '#/components/schemas/tabKey'
+              tabValue:
+                $ref: '#/components/schemas/tabValue'
+              createdBy:
+                $ref: '#/components/schemas/createdBy'
+              createdDate:
+                $ref: '#/components/schemas/createdDate'
+              updatedBy:
+                $ref: '#/components/schemas/updatedBy'
+              updatedDate:
+                $ref: '#/components/schemas/updatedDate'
+    AdminNewRefTableRequest:
+      type: object
+      properties:
+        tableID:
+          $ref: '#/components/schemas/tableID'
+        tabKey:
+          $ref: '#/components/schemas/tabKey'
+        tabValue:
+          $ref: '#/components/schemas/tabValue'
+    AdminNewRefTableResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        tableID:
+          $ref: '#/components/schemas/tableID'
+        tabKey:
+          $ref: '#/components/schemas/tabKey'
+        tabValue:
+          $ref: '#/components/schemas/tabValue'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'
+    AdminUpdateRefTableRequest:
+      type: object
+      properties:
+        tabValue:
+          $ref: '#/components/schemas/tabValue'
+    AdminUpdateRefTableResponse:
+      type: object
+      properties:
+        retCode:
+          $ref: '#/components/schemas/retCode'
+        reasonCode:
+          $ref: '#/components/schemas/reasonCode'
+        infoMessage:
+          $ref: '#/components/schemas/infoMessage'
+        tableID:
+          $ref: '#/components/schemas/tableID'
+        tabKey:
+          $ref: '#/components/schemas/tabKey'
+        tabValue:
+          $ref: '#/components/schemas/tabValue'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        createdDate:
+          $ref: '#/components/schemas/createdDate'
+        updatedBy:
+          $ref: '#/components/schemas/updatedBy'
+        updatedDate:
+          $ref: '#/components/schemas/updatedDate'

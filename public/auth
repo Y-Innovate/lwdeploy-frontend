@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Y-Innovate LWD</title>
+<base href="/lwdeploy/" target="_self">
+</head>
+<body>
+<p>Signing you in&hellip; If nothing happens, <a href="/lwdeploy">continue here</a>.</p>
+<script>
+// LWW fills in &NEXTPAGE; after its sign-in program ran: "true" when the
+// session is there. The login page left the page to return to in
+// sessionStorage (only a path under /lwdeploy, never a passphrase). LWW
+// refuses paths that end in "/", so /lwdeploy/ becomes /lwdeploy and
+// /lwdeploy/my/ becomes /lwdeploy/my.
+(function () {
+  var requested = sessionStorage.getItem('requestedURL');
+  sessionStorage.removeItem('requestedURL');
+  var safe = typeof requested === 'string' && /^\/lwdeploy(\/|\?|$)/.test(requested) && requested.indexOf('//') === -1;
+  var target = safe ? requested.replace(/\/+(\?|$)/, '$1') : '/lwdeploy';
+  if ("&NEXTPAGE;" === "true") {
+    window.location.replace(target);
+  } else {
+    window.location.replace('/lwdeploy/login?failed=1');
+  }
+})();
+</script>
+</body>
+</html>

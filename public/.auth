@@ -1,0 +1,8 @@
+newFile:
+    fileId: LD000005
+    generateId: N
+    mediaType: text/html
+    transaction: "LWBL"
+    storeBinary: "N"
+    preexecLoadModule: LWWADPL2
+    preventCache: "Y"
