@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signed out - Y-Innovate LWD</title>
+<base href="/lwdeploy/" target="_self">
+<style>
+/* A plain LWW page, not the React app: the house style tokens of
+   src/styles.css, copied, because the built CSS has a hashed name */
+:root {
+  --bg-1: #ffffff; --bg-3: #efefed; --fg-1: #1a1a18; --fg-2: #6b6b67;
+  --line: rgba(0, 0, 0, 0.10); --brand: #378add;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-1: #1c1c1a; --bg-3: #2e2e2b; --fg-1: #f0efea; --fg-2: #9a9a94;
+    --line: rgba(255, 255, 255, 0.08);
+  }
+}
+body {
+  margin: 0; padding: 24px 16px; font: 14px/1.5 ui-sans-serif, system-ui, sans-serif;
+  color: var(--fg-1); background: var(--bg-3); -webkit-font-smoothing: antialiased;
+}
+main {
+  box-sizing: border-box; max-width: 24rem; margin: 48px auto 0; padding: 24px;
+  border: 0.5px solid var(--line); border-radius: 8px; background: var(--bg-1);
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 500; letter-spacing: -0.3px; }
+/* The elephant of public/olifantje.svg as a mask, in the brand color */
+.brand::before {
+  content: ""; flex-shrink: 0; width: 22px; height: 18px; background: var(--brand);
+  -webkit-mask: url(/lwdeploy/olifantje.svg) center / contain no-repeat;
+  mask: url(/lwdeploy/olifantje.svg) center / contain no-repeat;
+}
+h1 { margin: 16px 0 0; font-size: 17px; font-weight: 500; }
+p { margin: 4px 0 0; font-size: 13px; color: var(--fg-2); }
+a.button {
+  display: inline-block; margin-top: 16px; padding: 6px 14px; border-radius: 6px;
+  background: var(--fg-1); color: var(--bg-1); font-size: 13px; font-weight: 500; text-decoration: none;
+}
+a.button:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+<main>
+<div class="brand">Y-Innovate LWD</div>
+<h1>You have been signed out</h1>
+<p>Your session on LWD has ended.</p>
+<a class="button" href="/lwdeploy/login">Back to sign in</a>
+</main>
+<script>
+// LWW ended the session with its pre-exec program (LWWADPLO) before it
+// served this page. A page left to return to after sign-in belongs to the
+// previous session: drop it.
+sessionStorage.removeItem('requestedURL');
+</script>
+</body>
+</html>

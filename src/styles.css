@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+/* House style tokens: light + dark */
+:root {
+  --lwd-bg-1: #ffffff;
+  --lwd-bg-2: #f5f5f4;
+  --lwd-bg-3: #efefed;
+  --lwd-fg-1: #1a1a18;
+  --lwd-fg-2: #6b6b67;
+  --lwd-fg-3: #a0a09b;
+  --lwd-line: rgba(0, 0, 0, 0.10);
+  --lwd-line-strong: rgba(0, 0, 0, 0.18);
+  --lwd-success-bg: #eaf3de;
+  --lwd-success-fg: #3b6d11;
+  --lwd-warning-bg: #faeeda;
+  --lwd-warning-fg: #854f0b;
+  --lwd-danger-bg: #fcebeb;
+  --lwd-danger-fg: #a32d2d;
+  --lwd-info-bg: #e6f1fb;
+  --lwd-info-fg: #185fa5;
+  /* Roles a theme can restyle: the top bar, the primary action, the brand
+     mark and the active tab */
+  --lwd-header-bg: var(--lwd-bg-1);
+  --lwd-header-fg: var(--lwd-fg-1);
+  --lwd-header-fg-2: var(--lwd-fg-2);
+  --lwd-header-hover: var(--lwd-bg-2);
+  --lwd-accent: var(--lwd-fg-1);
+  --lwd-accent-fg: var(--lwd-bg-1);
+  --lwd-brand: #378add;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lwd-bg-1: #1c1c1a;
+    --lwd-bg-2: #252523;
+    --lwd-bg-3: #2e2e2b;
+    --lwd-fg-1: #f0efea;
+    --lwd-fg-2: #9a9a94;
+    --lwd-fg-3: #636360;
+    --lwd-line: rgba(255, 255, 255, 0.08);
+    --lwd-line-strong: rgba(255, 255, 255, 0.15);
+    --lwd-success-bg: #173404;
+    --lwd-success-fg: #c0dd97;
+    --lwd-warning-bg: #412402;
+    --lwd-warning-fg: #fac775;
+    --lwd-danger-bg: #501313;
+    --lwd-danger-fg: #f09595;
+    --lwd-info-bg: #042c53;
+    --lwd-info-fg: #b5d4f4;
+  }
+}
+
+@theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --color-surface: var(--lwd-bg-1);
+  --color-surface-2: var(--lwd-bg-2);
+  --color-surface-3: var(--lwd-bg-3);
+  --color-fg: var(--lwd-fg-1);
+  --color-fg-2: var(--lwd-fg-2);
+  --color-fg-3: var(--lwd-fg-3);
+  --color-line: var(--lwd-line);
+  --color-line-strong: var(--lwd-line-strong);
+  --color-success-bg: var(--lwd-success-bg);
+  --color-success-fg: var(--lwd-success-fg);
+  --color-warning-bg: var(--lwd-warning-bg);
+  --color-warning-fg: var(--lwd-warning-fg);
+  --color-danger-bg: var(--lwd-danger-bg);
+  --color-danger-fg: var(--lwd-danger-fg);
+  --color-info-bg: var(--lwd-info-bg);
+  --color-info-fg: var(--lwd-info-fg);
+  --color-header: var(--lwd-header-bg);
+  --color-header-fg: var(--lwd-header-fg);
+  --color-header-fg-2: var(--lwd-header-fg-2);
+  --color-header-hover: var(--lwd-header-hover);
+  --color-accent: var(--lwd-accent);
+  --color-accent-fg: var(--lwd-accent-fg);
+  --color-brand: var(--lwd-brand);
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--lwd-fg-1);
+    background: var(--lwd-bg-3);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Tailwind 4 leaves buttons with the default cursor; a hand shows what can
+     be clicked, as links have. Disabled ones show that they can't. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  select:not(:disabled),
+  summary,
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-1.5 text-[13px] font-medium text-accent-fg transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-1.5 rounded-md border-[0.5px] border-line-strong bg-transparent px-3.5 py-1.5 text-[13px] text-fg transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex items-center gap-1.5 rounded-md bg-danger-bg px-3.5 py-1.5 text-[13px] font-medium text-danger-fg transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .icon-btn {
+    @apply flex h-8 w-8 items-center justify-center rounded-md border-[0.5px] border-line text-base text-fg-2 transition-colors hover:bg-surface-2 hover:text-fg;
+  }
+  .row-action {
+    @apply flex items-center rounded-md p-0.5 text-[15px] text-fg-3 transition-colors hover:bg-surface-2 hover:text-fg;
+  }
+  .app-header {
+    @apply shrink-0 border-b-[0.5px] border-line bg-header text-header-fg;
+  }
+  .header-link {
+    @apply rounded-md px-2.5 py-1.5 text-[13.5px] text-header-fg-2 transition-colors hover:bg-header-hover hover:text-header-fg;
+  }
+  .header-link-active {
+    @apply bg-header-hover font-medium text-header-fg;
+  }
+  /* Tabs within a page */
+  .tab {
+    @apply flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] text-fg-2 transition-colors hover:bg-surface-2;
+  }
+  .tab-active {
+    @apply bg-surface-2 font-medium text-fg;
+  }
+  .card {
+    @apply overflow-hidden rounded-lg border-[0.5px] border-line bg-surface;
+  }
+  .input {
+    @apply h-8 w-full rounded-md border-[0.5px] border-line bg-surface-2 px-2.5 text-[13px] text-fg outline-none placeholder:text-fg-3 focus:border-line-strong;
+  }
+  .data-table th {
+    @apply whitespace-nowrap border-b-[0.5px] border-line px-4 py-2.5 text-left text-[11px] font-medium uppercase tracking-[0.5px] text-fg-3;
+  }
+  .data-table td {
+    @apply whitespace-nowrap border-b-[0.5px] border-line px-4 py-2.5 text-[13px] text-fg;
+  }
+  .data-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .data-table tbody tr:hover td {
+    @apply bg-surface-2;
+  }
+}
